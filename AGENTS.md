@@ -9,6 +9,8 @@
 - Бекенд у цьому репозиторії: Node.js + PostgreSQL, авторизація і дані користувача.
 
 ## Як працюємо
+- Проєкт навчальний: користувач — фронтендер, який переходить у фулстек. Пояснюй серверні поняття простими словами.
+- Код пише агент. Усі команди в терміналі (`npm install`, сервер, Docker, міграції, curl) запускає користувач: агент дає їх покроково з очікуваним результатом і сам не виконує. Зміни користувач ревʼюїть і сам додає в staged; агент git не чіпає.
 - Малі кроки, без великих шматків коду за раз.
 - Код мінімальний, без передчасних абстракцій і зайвих бібліотек.
 - Мова спілкування — українська.
@@ -43,7 +45,7 @@
 1. [x] `AGENTS.md`: мета, стек, структура, моделі, API, план.
    - [x] Дослідження аналогів і PRD MVP: `docs/research.md`, `docs/prd.md`.
 2. [ ] Каркас monorepo: кореневий `package.json` з workspaces, `shared/` з zod-схемами — у складі кроків 3–4.
-3. [ ] Сервер-каркас: Hono + Postgres 18 (Docker) + Drizzle, `GET /health`, `.env.example` — `server/PLAN.md`, крок 1.
+3. [x] Сервер-каркас: Hono + Postgres 18 (Docker) + Drizzle, `GET /health`, `.env.example` — `server/PLAN.md`, крок 1.
 4. [ ] Реєстрація і вхід з JWT (access + refresh): таблиці `users` і `refresh_tokens`, `GET /api/auth/me` — `server/PLAN.md`, крок 2.
 5. [ ] Swagger: OpenAPI із zod-схем через `hono-openapi`, Swagger UI на `/docs` — `server/PLAN.md`, крок 3.
 6. [ ] `requireAuth` + таблиці й роути `profile`, `weights`, `meals` з zod-валідацією і `describeRoute`; перевірка через `/docs`.
@@ -58,4 +60,4 @@
 14. [ ] (Пізніше) Деплой API на Hetzner за схемою `numismat-server` (pm2 + nginx + certbot): `location /api/` на `calorieser.tetiana-redko.com` → `127.0.0.1:3003`.
 
 ## Поточний стан
-Коду ще немає. База знань розділена: цей файл — правила, стек і план; продукт — `docs/prd.md` і `docs/research.md`; контракти пакетів — `.cursor/rules/`; ідеї — `docs/backlog.md`; журнал — `docs/journal.md`. Claude Code підхоплює цей файл через `CLAUDE.md`. Рішення за PRD (розділ 10) прийнято: AI на сервері, `gemini-3.8-flash`, текстовий опис і уточнення страви. Сервер — PostgreSQL + Drizzle і власний JWT замість MongoDB і Better Auth; план з поясненнями — `server/PLAN.md`. Клієнт — Expo SDK 58 замість 57 (Expo Go зі сторів з жовтня 2026 відкриває лише SDK 58), план — `app/PLAN.md`. Наступний крок — `server/PLAN.md`, крок 1 (крок 3 плану); `app/PLAN.md` від сервера не залежить, його можна робити паралельно.
+Є каркас сервера (`server/PLAN.md`, крок 1): корінь monorepo, `server/` з Hono, `env.ts`, `db.ts`, `/health`, `docker-compose.yml`; Node 26 через `.nvmrc`; `/health` з Postgres у Docker відповідає 200. База знань розділена: цей файл — правила, стек і план; продукт — `docs/prd.md` і `docs/research.md`; контракти пакетів — `.cursor/rules/`; ідеї — `docs/backlog.md`; журнал — `docs/journal.md`. Claude Code підхоплює цей файл через `CLAUDE.md`. Рішення за PRD (розділ 10) прийнято: AI на сервері, `gemini-3.8-flash`, текстовий опис і уточнення страви. Сервер — PostgreSQL + Drizzle і власний JWT замість MongoDB і Better Auth; план з поясненнями — `server/PLAN.md`. Клієнт — Expo SDK 58 замість 57 (Expo Go зі сторів з жовтня 2026 відкриває лише SDK 58), план — `app/PLAN.md`. Наступний крок — `server/PLAN.md`, крок 2 (крок 4 плану); `app/PLAN.md` від сервера не залежить, його можна робити паралельно.

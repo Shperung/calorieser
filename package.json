@@ -1,0 +1,5 @@
+{
+  "name": "calorieser",
+  "private": true,
+  "workspaces": ["server"]
+}
