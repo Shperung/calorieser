@@ -6,11 +6,31 @@ alwaysApply: false
 
 # app
 
-Expo SDK 57, Expo Router, `react-native-web`. Пакети — `npx expo install`. Перед API Expo звіряти major у `package.json` з `https://docs.expo.dev/versions/v<major>.0.0/`.
+Expo SDK 58, Expo Router, `react-native-web`. Порядок кроків і пояснення — `app/PLAN.md`.
 
 Поки коду немає — карта екранів і AI нижче. Коли файли з’являться, посилайся на них і не копіюй схеми відповіді в це правило.
 
+## Правила Expo
+
+Замість `AGENTS.md` і `CLAUDE.md`, які генерує `create-expo-app`: у `app/` їх не тримаємо, правила — тут.
+
+- Expo змінює API кожен SDK. Перед кодом з Expo / EAS / React Native API — major `expo` у `package.json` і документація `https://docs.expo.dev/versions/v<major>.0.0/`; для решти — індекс `https://docs.expo.dev/llms.txt` з виправленнями типових помилок LLM. Не з пам'яті.
+- Пакети — лише `npx expo install <пакет>`: він підбирає версії під SDK.
+- Після змін залежностей — `npx expo-doctor`; несумісні версії — `npx expo install --fix`; типи — `npx tsc --noEmit`.
+- Expo Go містить лише свої нативні модулі. Бібліотека з іншим нативним кодом → development build (`npx expo run:ios|android` або `eas build --profile development`).
+- `ios/` і `android/` генеруються (Continuous Native Generation): руками не створюємо й не редагуємо, нативне налаштування — через `app.json` і config plugins.
+- Маршрути — лише в `src/app/`; компоненти, хуки й утиліти — поза нею.
+
+## Запуск і web
+
+- Скрипти: `start` і `ios` з `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` (на робочому Mac LAN заблокована), `start:tunnel` — для телефона, `web`, `build:web` = `expo export -p web` → `dist/`.
+- `app.json`: `scheme: "calorieser"`, `plugins: ["expo-router"]`, `web.output: "single"` (SPA, один `index.html`), `experiments.typedRoutes`. `main` у `package.json` — `expo-router/entry`.
+- Web на `https://calorieser.tetiana-redko.com`: на сервері `/var/www/calorieser` (`git pull && npm ci && npm run build:web -w app`), nginx віддає `app/dist` з `try_files $uri $uri/ /index.html`, без pm2. Деталі й пастки nginx / certbot — `app/PLAN.md`, крок 4.
+- API в проді — `/api` на тому самому домені (крок 14), тож CORS потрібен лише в розробці.
+
 ## Файли
+
+Зараз (крок 7) — лише `src/app/_layout.tsx` (`Stack`), `index.tsx` (Головна), `sign-in.tsx`, `sign-up.tsx` (заглушки). Таби з'являться разом з екранами профілю й страви, тоді `index.tsx` переїде в `(tabs)/index.tsx`, а URL `/` не зміниться. Цільова карта:
 
 - `src/app/_layout.tsx` — AuthProvider, `Stack.Protected` guard за наявністю токенів.
 - `src/app/sign-in.tsx`, `sign-up.tsx`.

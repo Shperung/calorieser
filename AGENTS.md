@@ -25,7 +25,7 @@
 ## Стек
 Рішення, які легко порушити:
 - TypeScript скрізь. npm workspaces: `app`, `server`, `shared`.
-- Клієнт: Expo SDK 57, Expo Router, `react-native-web`. Графік ваги — власний компонент на `react-native-svg`, без chart-бібліотек.
+- Клієнт: Expo SDK 58, Expo Router, `react-native-web`. Web — SPA (`web.output: "single"`), статичні файли на nginx. Графік ваги — власний компонент на `react-native-svg`, без chart-бібліотек.
 - AI: Firebase AI Logic на сервері за зразком `numismat-web-app` (`gemini-3.8-flash`, `responseSchema`, App Check-токен від `firebase-admin`). Клієнт у Gemini не ходить. Firebase — лише для AI.
 - Сервер: Node.js 26 LTS, Hono + `@hono/node-server`. Dev — `tsx watch --env-file=.env`, запуск — `node --env-file=.env`.
 - Авторизація: власний JWT-флов (email + пароль): access-токен JWT на 15 хв (`hono/jwt`, HS256) і refresh-токен на 30 днів (у БД лише хеш, ротація при кожному оновленні). Паролі — Argon2id з `node:crypto`.
@@ -35,7 +35,7 @@
 ## Карта
 - `shared/` — типи й zod: Profile, WeightEntry, Meal, MealDraft; норма ккал і запобіжники (`calories.ts`). Деталі в `.cursor/rules/shared.mdc`. Коли з’явиться код, джерело правди — `shared/src/index.ts`; правило лише посилається на нього.
 - `server/` — Hono, JWT-авторизація, Postgres (Drizzle), Swagger, роути profile / weights / meals, AI (`src/ai.ts`). Деталі в `.cursor/rules/server.mdc`, кроки з поясненнями — `server/PLAN.md`.
-- `app/` — Expo: екрани, auth-клієнт, виклики API, зокрема AI-роутів. Деталі в `.cursor/rules/app.mdc`.
+- `app/` — Expo: екрани, auth-клієнт, виклики API, зокрема AI-роутів. Деталі в `.cursor/rules/app.mdc`, кроки з поясненнями — `app/PLAN.md`.
 
 Потоки: додаток ходить у `/api/auth/*`, `/api/profile`, `/api/weights`, `/api/meals` на Hono → Postgres. Фото (base64) і текст страви йдуть у `POST /api/meals/analyze`, норма — у `POST /api/profile/target`; сервер викликає Firebase AI Logic. Фото ніде не зберігається.
 
@@ -47,7 +47,7 @@
 4. [ ] Реєстрація і вхід з JWT (access + refresh): таблиці `users` і `refresh_tokens`, `GET /api/auth/me` — `server/PLAN.md`, крок 2.
 5. [ ] Swagger: OpenAPI із zod-схем через `hono-openapi`, Swagger UI на `/docs` — `server/PLAN.md`, крок 3.
 6. [ ] `requireAuth` + таблиці й роути `profile`, `weights`, `meals` з zod-валідацією і `describeRoute`; перевірка через `/docs`.
-7. [ ] Expo-додаток: `create-expo-app` (SDK 57), Expo Router, запуск на iOS / Android / Web.
+7. [ ] Expo-додаток за `app/PLAN.md`: SDK 58, Expo Router, порожні екрани Головна / Вхід / Реєстрація, запуск на iOS / Android / Web, web на `calorieser.tetiana-redko.com`.
 8. [ ] Auth у клієнті: `auth-client.ts` (токени, оновлення при 401), екрани входу / реєстрації, `Stack.Protected`.
 9. [ ] Профіль: форма біопараметрів + хронічні хвороби / особливості здоров'я, базова норма ккал (Mifflin-St Jeor, `shared/calories.ts`) із запобіжниками,
    згода на AI, `src/ai.ts` на сервері, персональна норма від AI (`POST /api/profile/target`) з поясненням і дисклеймером.
@@ -55,7 +55,7 @@
 11. [ ] Страва: фото (`expo-image-picker`) і / або текст → `POST /api/meals/analyze` (`analyzeMeal` на сервері, з урахуванням здоров'я, `warnings`) → форма редагування → `POST /api/meals`.
 12. [ ] Екран "Сьогодні": сума ккал / БЖВ за день vs норма, список прийомів, видалення.
 13. [ ] Полірування: тема, помилки / лоадери, перевірка на S25 Ultra, iOS Simulator, у браузері.
-14. [ ] (Пізніше) Деплой сервера на Hetzner за схемою `numismat-server` (pm2 + nginx + certbot), web-білд `expo export -p web`.
+14. [ ] (Пізніше) Деплой API на Hetzner за схемою `numismat-server` (pm2 + nginx + certbot): `location /api/` на `calorieser.tetiana-redko.com` → `127.0.0.1:3003`.
 
 ## Поточний стан
-Коду ще немає. База знань розділена: цей файл — правила, стек і план; продукт — `docs/prd.md` і `docs/research.md`; контракти пакетів — `.cursor/rules/`; ідеї — `docs/backlog.md`; журнал — `docs/journal.md`. Claude Code підхоплює цей файл через `CLAUDE.md`. Рішення за PRD (розділ 10) прийнято: AI на сервері, `gemini-3.8-flash`, текстовий опис і уточнення страви. Сервер — PostgreSQL + Drizzle і власний JWT замість MongoDB і Better Auth; план з поясненнями — `server/PLAN.md`. Наступний крок — `server/PLAN.md`, крок 1 (крок 3 плану).
+Коду ще немає. База знань розділена: цей файл — правила, стек і план; продукт — `docs/prd.md` і `docs/research.md`; контракти пакетів — `.cursor/rules/`; ідеї — `docs/backlog.md`; журнал — `docs/journal.md`. Claude Code підхоплює цей файл через `CLAUDE.md`. Рішення за PRD (розділ 10) прийнято: AI на сервері, `gemini-3.8-flash`, текстовий опис і уточнення страви. Сервер — PostgreSQL + Drizzle і власний JWT замість MongoDB і Better Auth; план з поясненнями — `server/PLAN.md`. Клієнт — Expo SDK 58 замість 57 (Expo Go зі сторів з жовтня 2026 відкриває лише SDK 58), план — `app/PLAN.md`. Наступний крок — `server/PLAN.md`, крок 1 (крок 3 плану); `app/PLAN.md` від сервера не залежить, його можна робити паралельно.
