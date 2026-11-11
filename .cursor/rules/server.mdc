@@ -1,0 +1,67 @@
+---
+description: Hono-сервер, JWT-авторизація, PostgreSQL (Drizzle), Swagger, API profile/weights/meals, AI через Firebase AI Logic. Читати перед роботою в server/.
+globs: server/**
+alwaysApply: false
+---
+
+# server
+
+Hono + PostgreSQL (Drizzle) + власний JWT. Контракт запитів і тіл — zod із `shared`. Порядок кроків і пояснення — `server/PLAN.md`.
+
+Поки коду немає — структура й API нижче. Коли файли з’являться, не дублюй тут поля моделей; посилайся на `shared/src/index.ts`, `src/schema.ts` і роути.
+
+## Файли
+
+- `src/index.ts` — Hono app, `logger()`, `cors()` для `/api/*`, `onError` / `notFound` у форматі `{ error }`, `GET /health`, mount routes, `/openapi.json`, `/docs`, `serve()`.
+- `src/env.ts` — змінні оточення через zod; з неправильними сервер не стартує.
+- `src/db.ts` — `drizzle(env.DATABASE_URL)`, драйвер `pg`.
+- `src/schema.ts` — таблиці Drizzle.
+- `src/auth.ts` — паролі (Argon2id з `node:crypto`), `issueTokens`, `hashToken`, `requireAuth = jwt({ secret, alg: 'HS256' })`.
+- `src/routes/auth.ts`, `profile.ts`, `weights.ts`, `meals.ts`.
+- `src/ai.ts` — Gemini через Firebase AI Logic, див. розділ AI.
+- `drizzle.config.ts` (`process.loadEnvFile()`), `drizzle/` — SQL-міграції, комітяться в git.
+- `docker-compose.yml` — `postgres:18`, том на `/var/lib/postgresql`.
+- `.env.example` — `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `JWT_SECRET` (від 32 символів), `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_APP_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
+- Dev: `tsx watch --env-file=.env`. Запуск: `node --env-file=.env`. Міграції: `db:generate`, потім `db:migrate`.
+
+## Postgres
+
+- `users` — `id uuid`, `email` unique (у нижньому регістрі), `password_hash` (`сіль:хеш` Argon2id), `created_at`.
+- `refresh_tokens` — `user_id` → `users` (`on delete cascade`), `token_hash` unique (SHA-256), `expires_at`, `created_at`. Рядок на кожен вхід.
+- `profiles` — Profile, 1:1 з `users` (`user_id` — primary key).
+- `weights` — WeightEntry, unique `(user_id, week_start)`; повтор за той самий тиждень оновлює запис.
+- `meals` — Meal, індекс `(user_id, eaten_at)`, `items` — `jsonb` (`MealItem[]`). Фото не зберігаємо.
+
+Схему змінюємо лише в `schema.ts` + `db:generate`; згенерований SQL переглядаємо перед `db:migrate`.
+
+## API
+
+Без токена доступні лише `/health`, `/docs`, `/openapi.json` і `register` / `login` / `refresh` / `logout`; решта — за `requireAuth` (`Authorization: Bearer <accessToken>`). Помилки — `{ error }` (ApiError). Кожен роут має `describeRoute`.
+
+- `POST /api/auth/register` Credentials → 201 AuthResponse; 409, якщо email зайнятий
+- `POST /api/auth/login` Credentials → AuthResponse; 401 з однаковим текстом для невідомого email і неправильного пароля
+- `POST /api/auth/refresh` `{ refreshToken }` → AuthTokens; старий токен видаляється (ротація), невідомий чи прострочений → 401
+- `POST /api/auth/logout` `{ refreshToken }` → 204
+- `GET /api/auth/me` → PublicUser
+- `GET /api/profile` → Profile | null
+- `PUT /api/profile` Profile → Profile
+- `POST /api/profile/target` → DailyTarget для збереженого профілю й останньої ваги; не зберігає, прийняту норму клієнт пише через `PUT /api/profile`
+- `GET /api/weights` → WeightEntry[] за датою
+- `PUT /api/weights` `{ weightKg }` → upsert поточного тижня
+- `GET /api/meals?date=YYYY-MM-DD` → Meal[]
+- `POST /api/meals` Meal → Meal
+- `POST /api/meals/analyze` `{ image?, text? }` → MealDraft
+- `DELETE /api/meals/:id`
+
+Access-токен — JWT HS256 на 15 хв (`sub` — id користувача, `exp`). Refresh-токен — 32 випадкові байти на 30 днів, у БД лише його SHA-256.
+
+CORS: `CORS_ORIGIN` (web-клієнт). Токен іде в заголовку, cookies не використовуємо.
+
+## AI (`src/ai.ts`)
+
+Зразок — `numismat-web-app/src/lib/ai.ts`: `firebase-admin` (`cert` з `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`) → `getAppCheck(admin).createToken(appId)` з кешем ~50 хв → `initializeServerApp(config, { appCheckToken })` → `getAI(app, { backend: new AgentPlatformBackend("global") })`. Модель `gemini-3.8-flash`, `responseMimeType: "application/json"` і `responseSchema`.
+
+- `analyzeMeal({ image?, text? }, profile)` → MealDraft. Текст описує страву або уточнює фото. У промпт — `healthConditions` / `healthNotes`, з них `warnings`; орієнтири й правила промпту — `docs/prd.md`, розділи 6.5 і 6.7.
+- `calcDailyTarget(profile, weightKg)` → `{ kcal, protein, fat, carbs, explanation }`: база з `shared/calories.ts` + мета + здоров'я; відповідь обмежується запобіжниками з `calories.ts`.
+
+Обидва AI-роути без `aiConsentAt` у профілі повертають 403. Тіло `analyze` — до ~5 МБ (`hono/body-limit`). Тіла AI-запитів не логуємо, фото не зберігаємо.

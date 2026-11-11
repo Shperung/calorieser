@@ -1,0 +1,44 @@
+---
+description: Expo-клієнт, екрани, auth, виклики AI-роутів сервера (аналіз страви, денна норма). Читати перед роботою в app/.
+globs: app/**
+alwaysApply: false
+---
+
+# app
+
+Expo SDK 57, Expo Router, `react-native-web`. Пакети — `npx expo install`. Перед API Expo звіряти major у `package.json` з `https://docs.expo.dev/versions/v<major>.0.0/`.
+
+Поки коду немає — карта екранів і AI нижче. Коли файли з’являться, посилайся на них і не копіюй схеми відповіді в це правило.
+
+## Файли
+
+- `src/app/_layout.tsx` — AuthProvider, `Stack.Protected` guard за наявністю токенів.
+- `src/app/sign-in.tsx`, `sign-up.tsx`.
+- `src/app/(tabs)/index.tsx` — сьогодні: ккал / БЖВ vs норма, список прийомів.
+- `src/app/(tabs)/add-meal.tsx` — фото і / або текст → `POST /api/meals/analyze` → редагування → зберегти.
+- `src/app/(tabs)/profile.tsx` — біопараметри, графік ваги, «Внести вагу».
+- `src/app/profile-edit.tsx`, `src/app/weight-add.tsx` (modal).
+- `src/components/` — `weight-chart.tsx` (`react-native-svg`, без chart-бібліотек), `meal-card.tsx`, `form.tsx`.
+- `src/lib/` — `api.ts` (fetch з токеном, зокрема AI-роути), `auth-client.ts`. Норма ккал — `calories.ts` із `shared`.
+- `src/theme.ts`.
+- Зображення: `expo-image-picker` (камера / галерея; на web — файл), `expo-image`.
+
+## Auth
+
+Власний JWT від сервера (`/api/auth/*`, схеми — `shared`). `accessToken` — у пам'яті, `refreshToken` — у `expo-secure-store` на iOS / Android і в `localStorage` на web. `api.ts` додає `Authorization: Bearer <accessToken>`; на 401 один раз викликає `POST /api/auth/refresh` і повторює запит, а якщо й це 401 — очищає токени й веде на вхід. Вихід — `POST /api/auth/logout` і очищення токенів.
+
+## Норма ккал
+
+Базова норма — `calories.ts` із `shared` (Mifflin-St Jeor і запобіжники), працює без AI.
+
+AI-норма — `POST /api/profile/target` після збереження профілю. Користувач бачить пояснення і приймає норму (`PUT /api/profile` з `dailyTarget`) або лишає базову.
+
+Здоров'я — чутливі дані. До першого AI-запиту — екран згоди (`docs/prd.md`, П7); згода зберігається в профілі як `aiConsentAt`. Дисклеймер «не є медичною порадою, консультуйтеся з лікарем».
+
+## AI-аналіз страви
+
+Клієнт у Gemini не ходить і Firebase не підключає: AI і App Check — на сервері.
+
+`toPart(uri)`: `fetch(uri).blob()` → `FileReader.readAsDataURL` → base64 (працює для `file://` і на web). Фото стискати через `quality` в `expo-image-picker`.
+
+Фото і / або текст → `POST /api/meals/analyze` → MealDraft. Користувач редагує позиції перед збереженням; зміна грамів пропорційно перераховує ккал і БЖВ.

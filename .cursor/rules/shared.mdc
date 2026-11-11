@@ -1,0 +1,48 @@
+---
+description: Спільні zod-схеми й типи Auth, Profile, WeightEntry, Meal, MealDraft і норма ккал. Читати перед роботою в shared/.
+globs: shared/**
+alwaysApply: false
+---
+
+# shared
+
+Типи й zod-схеми в `shared/src/index.ts`. Їх імпортують `app` і `server`. Окремих копій схем не заводити.
+
+`shared/src/calories.ts` — базова норма (Mifflin-St Jeor) і запобіжники з `docs/prd.md`, розділ 6.3. Клієнт показує базову норму, сервер обмежує нею AI-норму.
+
+Поки файлу немає — контракт нижче. Коли `shared/src/index.ts` з’явиться, правду тримай у коді; тут лише посилання і рішення, яких у типах не видно.
+
+Пакет віддає TypeScript без збирання: `"exports": "./src/index.ts"`, сервер підключає його як `"shared": "*"`. Для Swagger схеми мають `.meta({ ref, description })` (`server/PLAN.md`, крок 3).
+
+## Auth
+
+- `Credentials`: `{ email, password }`. Email обрізається від пробілів і переводиться в нижній регістр до перевірки формату (`z.string().trim().toLowerCase().pipe(z.email())`); пароль — 8–128 символів.
+- `RefreshRequest`: `{ refreshToken }`.
+- `AuthTokens`: `{ accessToken, refreshToken }`.
+- `PublicUser`: `{ id, email }` — без хешу пароля.
+- `AuthResponse`: `AuthTokens` + `{ user: PublicUser }`.
+- `ApiError`: `{ error }` — формат усіх помилок сервера, крім 400 від валідатора.
+
+## Profile
+
+`{ userId, sex, birthDate, heightCm, activityLevel, goal: "lose" | "keep" | "gain", targetWeightKg, healthConditions: string[], healthNotes, aiConsentAt?, dailyTarget?: { kcal, protein, fat, carbs, explanation } }`
+
+- `healthConditions` — вибір зі списку: діабет 1 / 2 типу, гіпертонія, захворювання нирок, подагра, гастрит / виразка, гіпотиреоз, целіакія, лактозна непереносимість, вагітність / годування, харчові алергії. `healthNotes` — вільний текст (ліки, обмеження від лікаря).
+- `aiConsentAt` — ISO-час згоди на передачу даних у Gemini. Немає поля — немає згоди, сервер відхиляє AI-запити. Відкликання прибирає поле.
+- `dailyTarget` — прийнята персональна норма від AI. Базова норма рахується в `calories.ts` і працює без AI.
+
+## WeightEntry
+
+`{ userId, weekStart, weightKg }`. `weekStart` — понеділок, ISO-дата. Унікальність `(userId, weekStart)` забезпечує сервер (unique-індекс у Postgres).
+
+## Meal
+
+`{ userId, eatenAt, title, items: MealItem[], totalKcal }`
+
+`MealItem`: `{ name, grams, kcal, protein, fat, carbs }`
+
+Фото їжі в модель не входить — зберігаємо лише результат аналізу.
+
+## MealDraft
+
+Запит `POST /api/meals/analyze`: `{ image?: { data, mimeType }, text? }`, потрібне хоча б одне; `data` — base64. Відповідь: `{ title, items: MealItem[], warnings: string[] }`.
