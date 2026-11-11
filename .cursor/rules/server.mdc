@@ -34,6 +34,13 @@ Hono + PostgreSQL (Drizzle) + власний JWT. Контракт запиті�
 
 Схему змінюємо лише в `schema.ts` + `db:generate`; згенерований SQL переглядаємо перед `db:migrate`.
 
+Запити — через конструктор Drizzle (`db.select().from(...)`). Над кожним запитом коментар з еквівалентним сирим SQL, щоб вчити мову: ключові слова SQL великими літерами, назви таблиць і колонок — як у базі (`snake_case`), значення з коду — параметрами `$1`, `$2`. Те саме для сирого `sql`: ключові слова великими.
+
+```ts
+// SELECT * FROM users WHERE email = $1
+const [user] = await db.select().from(users).where(eq(users.email, email))
+```
+
 ## API
 
 Без токена доступні лише `/health`, `/docs`, `/openapi.json` і `register` / `login` / `refresh` / `logout`; решта — за `requireAuth` (`Authorization: Bearer <accessToken>`). Помилки — `{ error }` (ApiError). Кожен роут має `describeRoute`.

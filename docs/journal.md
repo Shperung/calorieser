@@ -11,3 +11,4 @@
 - Додано скіл `commit` (`.claude/skills/commit/SKILL.md`, його читають і Cursor, і Claude Code): повідомлення лише зі staged-змін у стилі історії репозиторію, коміт тільки після підтвердження.
 - Каркас сервера (`server/PLAN.md`, крок 1): npm workspaces, Hono 4.13 + `@hono/node-server`, Drizzle 0.45 + `pg`, zod 4, `env.ts`, `/health`, єдиний формат помилок, CORS, Postgres 18 у `docker-compose.yml`. Node 26 через nvm. Перевірено 404 / 500 / CORS, `/health` з Postgres у Docker — 200.
 - Додано `README.md`: перший запуск, npm-скрипти сервера і команди Docker для бази.
+- Правило в `server.mdc`: над кожним запитом Drizzle — коментар з сирим SQL, ключові слова SQL великими літерами.

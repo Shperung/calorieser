@@ -13,7 +13,7 @@ app.use(logger())
 app.use('/api/*', cors({ origin: env.CORS_ORIGIN }))
 
 app.get('/health', async (c) => {
-  await db.execute(sql`select 1`)
+  await db.execute(sql`SELECT 1`)
   return c.json({ ok: true })
 })
 
